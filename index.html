@@ -1,38 +1,29 @@
 <!DOCTYPE html>
 <html lang="fa">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lumera Staking DApp</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-
 <body class="bg-gradient-to-b from-yellow-400 to-red-700">
 
   <!-- نوار بالای صفحه -->
-  <header class="bg-green-100 text-black p-4 shadow-md">
-    <div class="flex items-center justify-between">
-      <h1 class="text-3xl font-bold">Lumera Staking</h1>
-      <button id="connectKeplrBtn" class="bg-yellow-400 px-4 py-2 rounded-full hover:bg-yellow-500">
-        Connect Keplr
-      </button>
-    </div>
+  <header class="bg-green-100 text-black p-4 shadow-md flex items-center justify-between">
+    <h1 class="text-3xl font-bold">Lumera Staking</h1>
+    <button id="connectKeplrBtn" class="bg-yellow-400 px-4 py-2 rounded-full hover:bg-yellow-500">
+      Connect Keplr
+    </button>
   </header>
 
   <!-- محتوای اصلی -->
   <main class="p-6">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      
+
       <!-- کارت استیکینگ -->
       <div class="bg-white shadow-lg rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-2">Staked Amount</h2>
         <p id="stakedAmount" class="text-2xl font-bold text-green-500">0 LUM</p>
-      </div>
-
-      <!-- کارت کیف پول -->
-      <div class="bg-white shadow-lg rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-2">Your Wallet</h2>
-        <p id="walletAddress" class="text-2xl font-bold text-red-500">Not Connected</p>
       </div>
 
       <!-- کارت عملیات استیک -->
@@ -56,21 +47,15 @@
     </div>
   </main>
 
-  <!-- کتابخانه CosmJS برای تراکنش -->
-  <script src="https://cdn.jsdelivr.net/npm/@cosmjs/stargate@0.28.5/dist/stargate.min.js"></script>
-
-  <!-- اسکریپت Keplr + Stake/Unstake -->
+  <!-- اسکریپت Keplr + تراکنش Stake/Unstake -->
   <script>
-    const RPC = "https://lumera-testnet-rpc.stakerhouse.com";
     const CHAIN_ID = "lumera-testnet-2";
     const VALIDATOR = "lumera1yl39t9djgh4gnjw77h9k354eus305n7pnyup7m"; // ولیدیتور ثابت
-
-    let offlineSigner, client, userAddress;
+    let userAddress;
 
     // اتصال کیف پول
     async function connectKeplr() {
       const btn = document.getElementById("connectKeplrBtn");
-      const walletAddrText = document.getElementById("walletAddress");
 
       if (!window.keplr) {
         alert("لطفاً افزونه Keplr را نصب کنید.");
@@ -79,16 +64,12 @@
 
       try {
         await window.keplr.enable(CHAIN_ID);
-        offlineSigner = window.getOfflineSigner(CHAIN_ID);
+        const offlineSigner = window.getOfflineSigner(CHAIN_ID);
         const accounts = await offlineSigner.getAccounts();
         userAddress = accounts[0].address;
 
         // نمایش آدرس کوتاه شده روی دکمه
         btn.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
-        walletAddrText.innerText = userAddress;
-
-        // ایجاد client با CosmJS CDN
-        client = await window.cosmjsStargate.StargateClient.connectWithSigner(RPC, offlineSigner);
 
       } catch(e) {
         console.error(e);
@@ -101,21 +82,23 @@
       const amount = document.getElementById("stakeAmount").value;
       if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
 
-      const stakeMsg = {
-        typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
+      const msg = {
+        type: "cosmos-sdk/MsgDelegate",
         value: {
-          delegatorAddress: userAddress,
-          validatorAddress: VALIDATOR,
+          delegator_address: userAddress,
+          validator_address: VALIDATOR,
           amount: {
             denom: "ulume",
-            amount: (Number(amount)*1_000_000).toString()
+            amount: (Number(amount) * 1000000).toString()
           }
         }
       };
 
+      const fee = { amount: [{ denom: "ulume", amount: "500" }], gas: "200000" };
+
       try {
-        const fee = { amount: [{ denom: "ulume", amount: "500" }], gas: "200000" };
-        const result = await client.signAndBroadcast(userAddress, [stakeMsg], fee);
+        const result = await window.keplr.signAndBroadcast(CHAIN_ID, [msg], fee);
+        console.log(result);
         alert("Stake ارسال شد! txHash: " + result.transactionHash);
       } catch(e) {
         console.error(e);
@@ -128,21 +111,23 @@
       const amount = document.getElementById("stakeAmount").value;
       if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
 
-      const undelegateMsg = {
-        typeUrl: "/cosmos.staking.v1beta1.MsgUndelegate",
+      const msg = {
+        type: "cosmos-sdk/MsgUndelegate",
         value: {
-          delegatorAddress: userAddress,
-          validatorAddress: VALIDATOR,
+          delegator_address: userAddress,
+          validator_address: VALIDATOR,
           amount: {
             denom: "ulume",
-            amount: (Number(amount)*1_000_000).toString()
+            amount: (Number(amount) * 1000000).toString()
           }
         }
       };
 
+      const fee = { amount: [{ denom: "ulume", amount: "500" }], gas: "200000" };
+
       try {
-        const fee = { amount: [{ denom: "ulume", amount: "500" }], gas: "200000" };
-        const result = await client.signAndBroadcast(userAddress, [undelegateMsg], fee);
+        const result = await window.keplr.signAndBroadcast(CHAIN_ID, [msg], fee);
+        console.log(result);
         alert("Unstake ارسال شد! txHash: " + result.transactionHash);
       } catch(e) {
         console.error(e);
@@ -150,6 +135,12 @@
       }
     }
 
-    // Event listeners
     document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("connectKep
+      document.getElementById("connectKeplrBtn").addEventListener("click", connectKeplr);
+      document.getElementById("stakeBtn").addEventListener("click", stake);
+      document.getElementById("unstakeBtn").addEventListener("click", unstake);
+    });
+  </script>
+
+</body>
+</html>
