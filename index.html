@@ -43,14 +43,19 @@
     </div>
   </main>
 
+  <!-- CosmJS UMD درست -->
+  <script src="https://cdn.jsdelivr.net/npm/@cosmjs/stargate@0.28.5/dist/stargate.umd.min.js"></script>
+
   <script>
     const CHAIN_ID = "lumera-testnet-2";
     const RPC = "https://lumera-testnet-rpc.stakerhouse.com";
     const VALIDATOR = "lumera1yl39t9djgh4gnjw77h9k354eus305n7pnyup7m";
 
     let userAddress;
-    let stakeBtn = document.getElementById("stakeBtn");
-    let unstakeBtn = document.getElementById("unstakeBtn");
+    let client;
+
+    const stakeBtn = document.getElementById("stakeBtn");
+    const unstakeBtn = document.getElementById("unstakeBtn");
 
     async function connectKeplr() {
       const btn = document.getElementById("connectKeplrBtn");
@@ -61,68 +66,68 @@
       }
 
       try {
+        // فعال کردن chain در کیف پول
         await window.keplr.enable(CHAIN_ID);
         const offlineSigner = window.getOfflineSigner(CHAIN_ID);
         const accounts = await offlineSigner.getAccounts();
         userAddress = accounts[0].address;
 
-        // نمایش آدرس کوتاه شده
+        // نمایش آدرس کوتاه شده روی دکمه
         btn.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
+
+        // ساخت client با SigningStargateClient درست
+        client = await window.Stargate.SigningStargateClient.connectWithSigner(RPC, offlineSigner);
 
         // فعال کردن دکمه‌ها
         stakeBtn.disabled = false;
         unstakeBtn.disabled = false;
 
-      } catch(e) {
-        console.error(e);
-        alert("خطا در اتصال کیف پول: " + e.message);
-      }
-    }
+        console.log("Keplr connected:", userAddress);
 
-    async function sendTransaction(txData) {
-      try {
-        const offlineSigner = window.getOfflineSigner(CHAIN_ID);
-        const accounts = await offlineSigner.getAccounts();
-        const result = await offlineSigner.signAndBroadcast(accounts[0].address, txData, { gas: "200000", amount: [{ denom: "ulume", amount: "500" }] });
-        
-        alert("تراکنش ارسال شد! TxHash: " + result.transactionHash);
-        console.log(result);
       } catch (e) {
         console.error(e);
-        alert("خطا در ارسال تراکنش: " + e.message);
+        alert("خطا در اتصال به کیف پول: " + e.message);
       }
     }
 
     async function stake() {
       const amount = document.getElementById("stakeAmount").value;
-      if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
+      if (!amount) return alert("لطفاً مقدار LUME را وارد کنید");
 
-      const txData = [{
-        type: "cosmos-sdk/MsgDelegate",
-        value: {
-          delegator_address: userAddress,
-          validator_address: VALIDATOR,
-          amount: { denom: "ulume", amount: (Number(amount)*1_000_000).toString() }
-        }
-      }];
-      
-      sendTransaction(txData);
+      try {
+        const result = await client.delegateTokens(
+          userAddress,
+          VALIDATOR,
+          (Number(amount) * 1_000_000).toString(),
+          "ulume",
+          "auto"
+        );
+        console.log(result);
+        alert("Stake ارسال شد! TxHash: " + result.transactionHash);
+      } catch (e) {
+        console.error(e);
+        alert("خطا در ارسال Stake: " + e.message);
+      }
     }
 
     async function unstake() {
       const amount = document.getElementById("stakeAmount").value;
-      if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
+      if (!amount) return alert("لطفاً مقدار LUME را وارد کنید");
 
-      const txData = [{
-        type: "cosmos-sdk/MsgUndelegate",
-        value: {
-          delegator_address: userAddress,
-          validator_address: VALIDATOR,
-          amount: { denom: "ulume", amount: (Number(amount)*1_000_000).toString() }
-        }
-      }];
-      
-      sendTransaction(txData);
+      try {
+        const result = await client.undelegateTokens(
+          userAddress,
+          VALIDATOR,
+          (Number(amount) * 1_000_000).toString(),
+          "ulume",
+          "auto"
+        );
+        console.log(result);
+        alert("Unstake ارسال شد! TxHash: " + result.transactionHash);
+      } catch (e) {
+        console.error(e);
+        alert("خطا در ارسال Unstake: " + e.message);
+      }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
