@@ -79,64 +79,50 @@
       }
     }
 
+    async function sendTransaction(txData) {
+      try {
+        const offlineSigner = window.getOfflineSigner(CHAIN_ID);
+        const accounts = await offlineSigner.getAccounts();
+        const result = await offlineSigner.signAndBroadcast(accounts[0].address, txData, { gas: "200000", amount: [{ denom: "ulume", amount: "500" }] });
+        
+        alert("تراکنش ارسال شد! TxHash: " + result.transactionHash);
+        console.log(result);
+      } catch (e) {
+        console.error(e);
+        alert("خطا در ارسال تراکنش: " + e.message);
+      }
+    }
+
     async function stake() {
       const amount = document.getElementById("stakeAmount").value;
       if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
 
-      try {
-        // ساخت MsgDelegate
-        const msg = {
-          type: "cosmos-sdk/MsgDelegate",
-          value: {
-            delegator_address: userAddress,
-            validator_address: VALIDATOR,
-            amount: { denom: "ulume", amount: (Number(amount)*1_000_000).toString() }
-          }
-        };
-
-        const fee = { amount: [{ denom: "ulume", amount: "500" }], gas: "200000" };
-
-        const offlineSigner = window.getOfflineSigner(CHAIN_ID);
-        const accounts = await offlineSigner.getAccounts();
-
-        // امضا و ارسال مستقیم با Keplr
-        const result = await window.keplr.signAndBroadcast(CHAIN_ID, [msg], fee);
-        console.log(result);
-        alert("Stake ارسال شد! TxHash: " + result.transactionHash);
-
-      } catch(e) {
-        console.error(e);
-        alert("خطا در ارسال Stake: " + e.message);
-      }
+      const txData = [{
+        type: "cosmos-sdk/MsgDelegate",
+        value: {
+          delegator_address: userAddress,
+          validator_address: VALIDATOR,
+          amount: { denom: "ulume", amount: (Number(amount)*1_000_000).toString() }
+        }
+      }];
+      
+      sendTransaction(txData);
     }
 
     async function unstake() {
       const amount = document.getElementById("stakeAmount").value;
       if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
 
-      try {
-        const msg = {
-          type: "cosmos-sdk/MsgUndelegate",
-          value: {
-            delegator_address: userAddress,
-            validator_address: VALIDATOR,
-            amount: { denom: "ulume", amount: (Number(amount)*1_000_000).toString() }
-          }
-        };
-
-        const fee = { amount: [{ denom: "ulume", amount: "500" }], gas: "200000" };
-
-        const offlineSigner = window.getOfflineSigner(CHAIN_ID);
-        const accounts = await offlineSigner.getAccounts();
-
-        const result = await window.keplr.signAndBroadcast(CHAIN_ID, [msg], fee);
-        console.log(result);
-        alert("Unstake ارسال شد! TxHash: " + result.transactionHash);
-
-      } catch(e) {
-        console.error(e);
-        alert("خطا در ارسال Unstake: " + e.message);
-      }
+      const txData = [{
+        type: "cosmos-sdk/MsgUndelegate",
+        value: {
+          delegator_address: userAddress,
+          validator_address: VALIDATOR,
+          amount: { denom: "ulume", amount: (Number(amount)*1_000_000).toString() }
+        }
+      }];
+      
+      sendTransaction(txData);
     }
 
     document.addEventListener("DOMContentLoaded", () => {
