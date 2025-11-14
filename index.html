@@ -6,10 +6,50 @@
   <title>Lumera Staking DApp</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-gray-100">
-  <div class="min-h-screen flex flex-col justify-center items-center">
-    <h1 class="text-center text-4xl font-bold text-blue-600 mb-4">سلام به Lumera Staking DApp</h1>
-    <p class="text-center text-lg text-gray-700">به‌زودی قابلیت اتصال به کیف پول و استیک اضافه می‌شود.</p>
-  </div>
+<body class="bg-gray-50">
+
+  <!-- نوار بالای صفحه -->
+  <header class="bg-green-100 text-black p-4 shadow-md">
+    <div class="flex items-center justify-between">
+      <h1 class="text-3xl font-bold">Lumera Staking</h1>
+      <button class="bg-yellow-400 px-4 py-2 rounded-full hover:bg-yellow-500">
+        Connect Kepler
+      </button>
+    </div>
+  </header>
+
+  <!-- محتوای اصلی -->
+  <main class="p-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- کارت استیکینگ -->
+      <div class="bg-white shadow-lg rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-2">Staked Amount</h2>
+        <p class="text-2xl font-bold text-green-500">1000 LUM</p>
+      </div>
+
+      <!-- کارت کیف پول -->
+      <div class="bg-white shadow-lg rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-2">Your Wallet</h2>
+        <p class="text-2xl font-bold text-red-500">Kepler Wallet</p>
+      </div>
+
+      <!-- کارت دکمه‌ها -->
+      <div class="bg-white shadow-lg rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-2">Actions</h2>
+        <button class="bg-green-400 text-white px-6 py-3 rounded-full hover:bg-green-500 mb-4 w-full">
+          Stake
+        </button>
+        <button class="bg-red-400 text-white px-6 py-3 rounded-full hover:bg-red-500 w-full">
+          Unstake
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- افزودن AOS برای انیمیشن‌های ورود -->
+  <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+  <script>
+    AOS.init();
+  </script>
 </body>
 </html>
