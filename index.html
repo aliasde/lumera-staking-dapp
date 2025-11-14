@@ -8,7 +8,7 @@
 </head>
 <body class="bg-gradient-to-b from-yellow-400 to-red-700">
 
-  <!-- نوار بالای صفحه -->
+  <!-- هدر -->
   <header class="bg-green-100 text-black p-4 shadow-md flex items-center justify-between">
     <h1 class="text-3xl font-bold">Lumera Staking</h1>
     <button id="connectKeplrBtn" class="bg-yellow-400 px-4 py-2 rounded-full hover:bg-yellow-500">
@@ -16,26 +16,22 @@
     </button>
   </header>
 
-  <!-- محتوای اصلی -->
+  <!-- محتوا -->
   <main class="p-6">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-      <!-- کارت استیکینگ -->
+      <!-- کارت استیک -->
       <div class="bg-white shadow-lg rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-2">Staked Amount</h2>
         <p id="stakedAmount" class="text-2xl font-bold text-green-500">0 LUM</p>
       </div>
 
-      <!-- کارت عملیات استیک -->
+      <!-- عملیات استیک -->
       <div class="bg-white shadow-lg rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-2">Actions</h2>
-
-        <!-- Input مقدار استیک -->
         <div class="mt-2">
           <input id="stakeAmount" type="number" placeholder="مقدار LUME برای استیک" class="p-2 rounded border w-full">
         </div>
-
-        <!-- دکمه‌های Stake / Unstake -->
         <button id="stakeBtn" class="bg-green-400 text-white px-6 py-3 rounded-full hover:bg-green-500 mb-4 w-full mt-4" disabled>
           Stake
         </button>
@@ -47,19 +43,14 @@
     </div>
   </main>
 
-  <!-- CosmJS UMD درست -->
-  <script src="https://cdn.jsdelivr.net/npm/@cosmjs/stargate@0.28.5/dist/stargate.umd.min.js"></script>
-
   <script>
     const CHAIN_ID = "lumera-testnet-2";
     const RPC = "https://lumera-testnet-rpc.stakerhouse.com";
     const VALIDATOR = "lumera1yl39t9djgh4gnjw77h9k354eus305n7pnyup7m";
 
     let userAddress;
-    let client;
-
-    const stakeBtn = document.getElementById("stakeBtn");
-    const unstakeBtn = document.getElementById("unstakeBtn");
+    let stakeBtn = document.getElementById("stakeBtn");
+    let unstakeBtn = document.getElementById("unstakeBtn");
 
     async function connectKeplr() {
       const btn = document.getElementById("connectKeplrBtn");
@@ -75,21 +66,16 @@
         const accounts = await offlineSigner.getAccounts();
         userAddress = accounts[0].address;
 
-        // نمایش آدرس کوتاه شده روی دکمه
+        // نمایش آدرس کوتاه شده
         btn.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
 
-        // ایجاد client با SigningStargateClient از UMD
-        client = await window.Stargate.SigningStargateClient.connectWithSigner(RPC, offlineSigner);
-
-        // فعال کردن دکمه‌ها بعد از اتصال موفق
+        // فعال کردن دکمه‌ها
         stakeBtn.disabled = false;
         unstakeBtn.disabled = false;
 
-        console.log("Keplr connected:", userAddress);
-
       } catch(e) {
         console.error(e);
-        alert("خطا در اتصال به کیف پول: " + e.message);
+        alert("خطا در اتصال کیف پول: " + e.message);
       }
     }
 
@@ -98,15 +84,26 @@
       if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
 
       try {
-        const result = await client.delegateTokens(
-          userAddress,
-          VALIDATOR,
-          (Number(amount) * 1_000_000).toString(),
-          "ulume",
-          "auto"
-        );
+        // ساخت MsgDelegate
+        const msg = {
+          type: "cosmos-sdk/MsgDelegate",
+          value: {
+            delegator_address: userAddress,
+            validator_address: VALIDATOR,
+            amount: { denom: "ulume", amount: (Number(amount)*1_000_000).toString() }
+          }
+        };
+
+        const fee = { amount: [{ denom: "ulume", amount: "500" }], gas: "200000" };
+
+        const offlineSigner = window.getOfflineSigner(CHAIN_ID);
+        const accounts = await offlineSigner.getAccounts();
+
+        // امضا و ارسال مستقیم با Keplr
+        const result = await window.keplr.signAndBroadcast(CHAIN_ID, [msg], fee);
         console.log(result);
         alert("Stake ارسال شد! TxHash: " + result.transactionHash);
+
       } catch(e) {
         console.error(e);
         alert("خطا در ارسال Stake: " + e.message);
@@ -118,15 +115,24 @@
       if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
 
       try {
-        const result = await client.undelegateTokens(
-          userAddress,
-          VALIDATOR,
-          (Number(amount) * 1_000_000).toString(),
-          "ulume",
-          "auto"
-        );
+        const msg = {
+          type: "cosmos-sdk/MsgUndelegate",
+          value: {
+            delegator_address: userAddress,
+            validator_address: VALIDATOR,
+            amount: { denom: "ulume", amount: (Number(amount)*1_000_000).toString() }
+          }
+        };
+
+        const fee = { amount: [{ denom: "ulume", amount: "500" }], gas: "200000" };
+
+        const offlineSigner = window.getOfflineSigner(CHAIN_ID);
+        const accounts = await offlineSigner.getAccounts();
+
+        const result = await window.keplr.signAndBroadcast(CHAIN_ID, [msg], fee);
         console.log(result);
         alert("Unstake ارسال شد! TxHash: " + result.transactionHash);
+
       } catch(e) {
         console.error(e);
         alert("خطا در ارسال Unstake: " + e.message);
