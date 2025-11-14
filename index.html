@@ -38,13 +38,20 @@
         <p id="walletAddress" class="text-2xl font-bold text-red-500">Not Connected</p>
       </div>
 
-      <!-- کارت دکمه‌ها -->
+      <!-- کارت عملیات استیک -->
       <div class="bg-white shadow-lg rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-2">Actions</h2>
-        <button class="bg-green-400 text-white px-6 py-3 rounded-full hover:bg-green-500 mb-4 w-full">
+
+        <!-- Input مقدار استیک -->
+        <div class="mt-2">
+          <input id="stakeAmount" type="number" placeholder="مقدار LUME برای استیک" class="p-2 rounded border w-full">
+        </div>
+
+        <!-- دکمه‌های Stake / Unstake -->
+        <button id="stakeBtn" class="bg-green-400 text-white px-6 py-3 rounded-full hover:bg-green-500 mb-4 w-full mt-4">
           Stake
         </button>
-        <button class="bg-red-400 text-white px-6 py-3 rounded-full hover:bg-red-500 w-full">
+        <button id="unstakeBtn" class="bg-red-400 text-white px-6 py-3 rounded-full hover:bg-red-500 w-full">
           Unstake
         </button>
       </div>
@@ -52,44 +59,19 @@
     </div>
   </main>
 
+  <!-- کتابخانه CosmJS برای تراکنش -->
+  <script src="https://cdn.jsdelivr.net/npm/@cosmjs/stargate@0.28.5/dist/stargate.min.js"></script>
 
-  <!-- اسکریپت اتصال Keplr -->
+  <!-- اسکریپت Keplr + Stake/Unstake -->
   <script>
-    const CHAIN_ID = "lumera-testnet-2";
-    const RPC = "https://lumera-testnet-rpc.stakerhouse.com";
     const REST = "https://lumera-testnet-rest.stakerhouse.com";
+    const RPC = "https://lumera-testnet-rpc.stakerhouse.com";
+    const CHAIN_ID = "lumera-testnet-2";
+    const VALIDATOR = "lumera1yl39t9djgh4gnjw77h9k354eus305n7pnyup7m"; // ولیدیتور ثابت
 
-    const CHAIN_INFO = {
-      chainId: CHAIN_ID,
-      chainName: "Lumera Testnet",
-      rpc: RPC,
-      rest: REST,
-      bip44: { coinType: 118 },
-      bech32Config: {
-        bech32PrefixAccAddr: "lumera",
-        bech32PrefixAccPub: "lumerapub",
-        bech32PrefixValAddr: "lumeravaloper",
-        bech32PrefixValPub: "lumeravaloperpub",
-        bech32PrefixConsAddr: "lumeracons",
-        bech32PrefixConsPub: "lumeraconspub",
-      },
-      currencies: [
-        { coinDenom: "LUME", coinMinimalDenom: "ulume", coinDecimals: 6 }
-      ],
-      feeCurrencies: [
-        { coinDenom: "LUME", coinMinimalDenom: "ulume", coinDecimals: 6 }
-      ],
-      stakeCurrency: {
-        coinDenom: "LUME",
-        coinMinimalDenom: "ulume",
-        coinDecimals: 6
-      }
-    };
+    let offlineSigner, client, userAddress;
 
-    function short(addr) {
-      return addr.slice(0, 6) + "..." + addr.slice(-4);
-    }
-
+    // اتصال کیف پول
     async function connectKeplr() {
       const btn = document.getElementById("connectKeplrBtn");
       const info = document.getElementById("walletInfo");
@@ -101,43 +83,93 @@
       }
 
       try {
-        if (window.keplr.experimentalSuggestChain) {
-          await window.keplr.experimentalSuggestChain(CHAIN_INFO);
-        }
-
         await window.keplr.enable(CHAIN_ID);
+        offlineSigner = window.getOfflineSigner(CHAIN_ID);
+        const accounts = await offlineSigner.getAccounts();
+        userAddress = accounts[0].address;
 
-        const signer = window.getOfflineSigner(CHAIN_ID);
-        const accounts = await signer.getAccounts();
-        const address = accounts[0].address;
+        walletAddrText.innerText = userAddress;
+        btn.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
+        info.innerText = "در حال دریافت موجودی...";
 
-        btn.innerText = short(address);
-        walletAddrText.innerText = address;
+        client = await window.StargateClient.connectWithSigner(RPC, offlineSigner);
 
-        info.innerHTML = "در حال دریافت موجودی...";
-
-        const balanceRes = await fetch(`${REST}/cosmos/bank/v1beta1/balances/${address}`);
+        // دریافت موجودی
+        const balanceRes = await fetch(`${REST}/cosmos/bank/v1beta1/balances/${userAddress}`);
         const balanceJson = await balanceRes.json();
-
         const ulume = balanceJson.balances.find(b => b.denom === "ulume");
         let amount = "0";
-
         if (ulume) {
           const n = BigInt(ulume.amount);
-          amount = (Number(n) / 1_000_000).toLocaleString();
+          amount = (Number(n)/1_000_000).toLocaleString();
         }
+        info.innerText = `آدرس: ${userAddress}\nموجودی: ${amount} LUME`;
 
-        info.innerHTML = `آدرس: ${address}<br>موجودی: ${amount} LUME`;
-
-      } catch (e) {
+      } catch(e) {
         console.error(e);
         alert("خطا در اتصال به کیف پول: " + e.message);
       }
     }
 
+    // تراکنش Stake
+    async function stake() {
+      const amount = document.getElementById("stakeAmount").value;
+      if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
+
+      const stakeMsg = {
+        typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
+        value: {
+          delegatorAddress: userAddress,
+          validatorAddress: VALIDATOR,
+          amount: {
+            denom: "ulume",
+            amount: (Number(amount)*1_000_000).toString()
+          }
+        }
+      };
+
+      try {
+        const fee = { amount: [{ denom: "ulume", amount: "500" }], gas: "200000" };
+        const result = await client.signAndBroadcast(userAddress, [stakeMsg], fee);
+        alert("Stake ارسال شد! txHash: " + result.transactionHash);
+      } catch(e) {
+        console.error(e);
+        alert("خطا در ارسال Stake: " + e.message);
+      }
+    }
+
+    // تراکنش Unstake
+    async function unstake() {
+      const amount = document.getElementById("stakeAmount").value;
+      if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
+
+      const undelegateMsg = {
+        typeUrl: "/cosmos.staking.v1beta1.MsgUndelegate",
+        value: {
+          delegatorAddress: userAddress,
+          validatorAddress: VALIDATOR,
+          amount: {
+            denom: "ulume",
+            amount: (Number(amount)*1_000_000).toString()
+          }
+        }
+      };
+
+      try {
+        const fee = { amount: [{ denom: "ulume", amount: "500" }], gas: "200000" };
+        const result = await client.signAndBroadcast(userAddress, [undelegateMsg], fee);
+        alert("Unstake ارسال شد! txHash: " + result.transactionHash);
+      } catch(e) {
+        console.error(e);
+        alert("خطا در ارسال Unstake: " + e.message);
+      }
+    }
+
+    // Event listeners
     document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("connectKeplrBtn")
-        .addEventListener("click", connectKeplr);
+      document.getElementById("connectKeplrBtn").addEventListener("click", connectKeplr);
+      document.getElementById("stakeBtn").addEventListener("click", stake);
+      document.getElementById("unstakeBtn").addEventListener("click", unstake);
     });
   </script>
 
