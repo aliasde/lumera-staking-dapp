@@ -36,10 +36,10 @@
         </div>
 
         <!-- دکمه‌های Stake / Unstake -->
-        <button id="stakeBtn" class="bg-green-400 text-white px-6 py-3 rounded-full hover:bg-green-500 mb-4 w-full mt-4">
+        <button id="stakeBtn" class="bg-green-400 text-white px-6 py-3 rounded-full hover:bg-green-500 mb-4 w-full mt-4" disabled>
           Stake
         </button>
-        <button id="unstakeBtn" class="bg-red-400 text-white px-6 py-3 rounded-full hover:bg-red-500 w-full">
+        <button id="unstakeBtn" class="bg-red-400 text-white px-6 py-3 rounded-full hover:bg-red-500 w-full" disabled>
           Unstake
         </button>
       </div>
@@ -47,17 +47,21 @@
     </div>
   </main>
 
-  <!-- کتابخانه CosmJS برای SigningStargateClient -->
+  <!-- CosmJS UMD -->
   <script src="https://cdn.jsdelivr.net/npm/@cosmjs/stargate@0.28.5/dist/stargate.min.js"></script>
 
   <script>
     const CHAIN_ID = "lumera-testnet-2";
     const RPC = "https://lumera-testnet-rpc.stakerhouse.com";
-    const VALIDATOR = "lumera1yl39t9djgh4gnjw77h9k354eus305n7pnyup7m"; // ولیدیتور ثابت
+    const VALIDATOR = "lumera1yl39t9djgh4gnjw77h9k354eus305n7pnyup7m";
+
     let userAddress;
     let client;
 
-    // اتصال Keplr و ایجاد SigningStargateClient
+    const stakeBtn = document.getElementById("stakeBtn");
+    const unstakeBtn = document.getElementById("unstakeBtn");
+
+    // اتصال کیف پول
     async function connectKeplr() {
       const btn = document.getElementById("connectKeplrBtn");
 
@@ -77,7 +81,12 @@
 
         // ایجاد client با SigningStargateClient
         client = await window.cosmjsStargate.SigningStargateClient.connectWithSigner(RPC, offlineSigner);
-        console.log("Keplr connected. Address:", userAddress);
+
+        // فعال کردن دکمه‌ها بعد از اتصال موفق
+        stakeBtn.disabled = false;
+        unstakeBtn.disabled = false;
+
+        console.log("Keplr connected:", userAddress);
 
       } catch(e) {
         console.error(e);
@@ -129,8 +138,8 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("connectKeplrBtn").addEventListener("click", connectKeplr);
-      document.getElementById("stakeBtn").addEventListener("click", stake);
-      document.getElementById("unstakeBtn").addEventListener("click", unstake);
+      stakeBtn.addEventListener("click", stake);
+      unstakeBtn.addEventListener("click", unstake);
     });
   </script>
 
