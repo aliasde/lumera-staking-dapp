@@ -66,19 +66,16 @@
       }
 
       try {
-        // فعال کردن chain در کیف پول
         await window.keplr.enable(CHAIN_ID);
         const offlineSigner = window.getOfflineSigner(CHAIN_ID);
         const accounts = await offlineSigner.getAccounts();
         userAddress = accounts[0].address;
 
-        // نمایش آدرس کوتاه شده روی دکمه
         btn.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
 
-        // ساخت client با SigningStargateClient درست
+        // ایجاد client با SigningStargateClient از UMD
         client = await window.Stargate.SigningStargateClient.connectWithSigner(RPC, offlineSigner);
 
-        // فعال کردن دکمه‌ها
         stakeBtn.disabled = false;
         unstakeBtn.disabled = false;
 
@@ -86,7 +83,7 @@
 
       } catch (e) {
         console.error(e);
-        alert("خطا در اتصال به کیف پول: " + e.message);
+        alert("خطا در اتصال کیف پول: " + e.message);
       }
     }
 
