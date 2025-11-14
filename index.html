@@ -6,31 +6,36 @@
   <title>Lumera Staking DApp</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-gradient-to-r from-yellow-400 via-red-500 to-red-700">
+
+<body class="bg-gradient-to-b from-yellow-400 to-red-700">
 
   <!-- نوار بالای صفحه -->
   <header class="bg-green-100 text-black p-4 shadow-md">
     <div class="flex items-center justify-between">
       <h1 class="text-3xl font-bold">Lumera Staking</h1>
-      <button class="bg-yellow-400 px-4 py-2 rounded-full hover:bg-yellow-500">
-        Connect Kepler
+      <button id="connectKeplrBtn" class="bg-yellow-400 px-4 py-2 rounded-full hover:bg-yellow-500">
+        Connect Keplr
       </button>
     </div>
   </header>
 
+  <!-- اطلاعات کیف پول -->
+  <div id="walletInfo" class="text-white p-4 text-lg"></div>
+
   <!-- محتوای اصلی -->
   <main class="p-6">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      
       <!-- کارت استیکینگ -->
       <div class="bg-white shadow-lg rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-2">Staked Amount</h2>
-        <p class="text-2xl font-bold text-green-500">1000 LUM</p>
+        <p id="stakedAmount" class="text-2xl font-bold text-green-500">0 LUM</p>
       </div>
 
       <!-- کارت کیف پول -->
       <div class="bg-white shadow-lg rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-2">Your Wallet</h2>
-        <p class="text-2xl font-bold text-red-500">Kepler Wallet</p>
+        <p id="walletAddress" class="text-2xl font-bold text-red-500">Not Connected</p>
       </div>
 
       <!-- کارت دکمه‌ها -->
@@ -43,13 +48,98 @@
           Unstake
         </button>
       </div>
+
     </div>
   </main>
 
-  <!-- افزودن AOS برای انیمیشن‌های ورود -->
-  <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+
+  <!-- اسکریپت اتصال Keplr -->
   <script>
-    AOS.init();
+    const CHAIN_ID = "lumera-testnet-2";
+    const RPC = "https://lumera-testnet-rpc.stakerhouse.com";
+    const REST = "https://lumera-testnet-rest.stakerhouse.com";
+
+    const CHAIN_INFO = {
+      chainId: CHAIN_ID,
+      chainName: "Lumera Testnet",
+      rpc: RPC,
+      rest: REST,
+      bip44: { coinType: 118 },
+      bech32Config: {
+        bech32PrefixAccAddr: "lumera",
+        bech32PrefixAccPub: "lumerapub",
+        bech32PrefixValAddr: "lumeravaloper",
+        bech32PrefixValPub: "lumeravaloperpub",
+        bech32PrefixConsAddr: "lumeracons",
+        bech32PrefixConsPub: "lumeraconspub",
+      },
+      currencies: [
+        { coinDenom: "LUME", coinMinimalDenom: "ulume", coinDecimals: 6 }
+      ],
+      feeCurrencies: [
+        { coinDenom: "LUME", coinMinimalDenom: "ulume", coinDecimals: 6 }
+      ],
+      stakeCurrency: {
+        coinDenom: "LUME",
+        coinMinimalDenom: "ulume",
+        coinDecimals: 6
+      }
+    };
+
+    function short(addr) {
+      return addr.slice(0, 6) + "..." + addr.slice(-4);
+    }
+
+    async function connectKeplr() {
+      const btn = document.getElementById("connectKeplrBtn");
+      const info = document.getElementById("walletInfo");
+      const walletAddrText = document.getElementById("walletAddress");
+
+      if (!window.keplr) {
+        alert("لطفاً افزونه Keplr را نصب کنید.");
+        return;
+      }
+
+      try {
+        if (window.keplr.experimentalSuggestChain) {
+          await window.keplr.experimentalSuggestChain(CHAIN_INFO);
+        }
+
+        await window.keplr.enable(CHAIN_ID);
+
+        const signer = window.getOfflineSigner(CHAIN_ID);
+        const accounts = await signer.getAccounts();
+        const address = accounts[0].address;
+
+        btn.innerText = short(address);
+        walletAddrText.innerText = address;
+
+        info.innerHTML = "در حال دریافت موجودی...";
+
+        const balanceRes = await fetch(`${REST}/cosmos/bank/v1beta1/balances/${address}`);
+        const balanceJson = await balanceRes.json();
+
+        const ulume = balanceJson.balances.find(b => b.denom === "ulume");
+        let amount = "0";
+
+        if (ulume) {
+          const n = BigInt(ulume.amount);
+          amount = (Number(n) / 1_000_000).toLocaleString();
+        }
+
+        info.innerHTML = `آدرس: ${address}<br>موجودی: ${amount} LUME`;
+
+      } catch (e) {
+        console.error(e);
+        alert("خطا در اتصال به کیف پول: " + e.message);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("connectKeplrBtn")
+        .addEventListener("click", connectKeplr);
+    });
   </script>
+
 </body>
-</html>      این کد رو چه تغییری بدم
+</html>
