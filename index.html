@@ -47,8 +47,8 @@
     </div>
   </main>
 
-  <!-- CosmJS UMD -->
-  <script src="https://cdn.jsdelivr.net/npm/@cosmjs/stargate@0.28.5/dist/stargate.min.js"></script>
+  <!-- CosmJS UMD درست -->
+  <script src="https://cdn.jsdelivr.net/npm/@cosmjs/stargate@0.28.5/dist/stargate.umd.min.js"></script>
 
   <script>
     const CHAIN_ID = "lumera-testnet-2";
@@ -61,7 +61,6 @@
     const stakeBtn = document.getElementById("stakeBtn");
     const unstakeBtn = document.getElementById("unstakeBtn");
 
-    // اتصال کیف پول
     async function connectKeplr() {
       const btn = document.getElementById("connectKeplrBtn");
 
@@ -79,8 +78,8 @@
         // نمایش آدرس کوتاه شده روی دکمه
         btn.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
 
-        // ایجاد client با SigningStargateClient
-        client = await window.cosmjsStargate.SigningStargateClient.connectWithSigner(RPC, offlineSigner);
+        // ایجاد client با SigningStargateClient از UMD
+        client = await window.Stargate.SigningStargateClient.connectWithSigner(RPC, offlineSigner);
 
         // فعال کردن دکمه‌ها بعد از اتصال موفق
         stakeBtn.disabled = false;
@@ -94,7 +93,6 @@
       }
     }
 
-    // تراکنش Stake
     async function stake() {
       const amount = document.getElementById("stakeAmount").value;
       if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
@@ -115,7 +113,6 @@
       }
     }
 
-    // تراکنش Unstake
     async function unstake() {
       const amount = document.getElementById("stakeAmount").value;
       if(!amount) return alert("لطفاً مقدار LUME را وارد کنید");
